@@ -10,6 +10,14 @@
 #ifdef _SIMULATE_
 #include "simAVRHeader.h"
 #endif
+#define C (2610.63)
+#define D (2930.66)
+#define E (3290.63)
+#define F (3490.23)
+#define G (3920.00)
+#define A (4400.00)
+#define B (4930.88)
+#define C5 (5230.25)
 volatile unsigned char TimerFlag = 0;
 
 unsigned long _avr_timer_M = 1;
@@ -68,25 +76,19 @@ void PWM_off(){
 	TCCR3A =0x00;
 	TCCR3B = 0x00;
 }
-double C = 2610.63;
-double D = 2930.66;
-double E = 3290.63;
-double F = 3490.23;
-double G = 3920.00;
-double A = 4400.00;
-double B = 4930.88;
-double C5 = 5230.25;
-double nodes[8] = { 2610.63,2930.66,3290.63,3490.23,3920.00,4400.00,4930.88,5230.25};
+
 unsigned char i;
 enum states {start, wait, pressA0,pressing,waitforreleasing} state;
+//--------------------------
+double nodes[16] = {D,D,0,E,E,D,C,C,D,E,F,G,G,F,E,E};
+unsigned char node_num = 16; //node number = 8 it is the value of node nuber- 1
+//----------------------------
 unsigned int count;
 unsigned char on;
 const unsigned int timer = 30;
 void tick(){
-	unsigned char A = ~PINA;
+	unsigned char pA = ~PINA;
 	unsigned char A0 = ~PINA &0x01;
-	unsigned char A1 = ~PINA & 0x02;
-	unsigned char A2 = ~PINA & 0x04;
 	switch(state){
 		case start:
 		state = wait;
@@ -105,7 +107,7 @@ void tick(){
 		else state = wait;
 		break;
 		case waitforreleasing:
-		if(A) state = waitforreleasing;
+		if(pA) state = waitforreleasing;
 		else state = wait;
 		break;
 		default:
@@ -119,7 +121,7 @@ void tick(){
 		break;
 		case pressA0:
 		PWM_on();
-		i = 4;
+		i = node_num -1;
 		set_PWM(nodes[i]);
 		count = 30;
 		break;

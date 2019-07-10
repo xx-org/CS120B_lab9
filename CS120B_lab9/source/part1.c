@@ -72,7 +72,7 @@ const double C = 2610.63;
 const double D = 2930.66;
 const double E = 3290.63;
 
-enum states {start, wait, pressA0, pressA1, pressA2,pressing} state;
+enum states {start, wait, pressA0, pressA1, pressA2,pressing, More} state;
 unsigned int count;
 const unsigned int timer = 30;
 void tick(){
@@ -85,27 +85,41 @@ void tick(){
 		state = wait;
 		break;
 		case wait:
-		if(A0 && ~A1 && ~A2)
+		if( (A &0x07) == 0x01)
 		state = pressA0;
-		else if(~A0 && A1 && ~A2)
+		else if((A &0x07) ==0x02)
 		state = pressA1;
-		else if(~A0 && ~A1 && A2)
+		else if((A&0x07) == 0x04)
 		state = pressA2;
+		else if (A > 0)
+		state = More;
 		else state = wait;
 		break;
 		case pressA0:
+		if(A == 1)
 		state = pressing;
+		else state = wait;
 		break;
 		case pressA1:
+		if(A == 2)
 		state = pressing;
+		else state = wait;
 		break;
 		case pressA2:
+		if(A == 4)
 		state = pressing;
+		else state = wait;
 		break;
 		case pressing:
+		if(A != 1 && A != 0 && A != 2 && A != 4) state = More;
 		if(count>0) state = pressing;
 		else state = wait;
 		break;
+		case More:
+		if( A == 0)
+			state = wait;
+		else
+			state = More;
 		default:
 		state =start;
 		break;
@@ -136,6 +150,9 @@ void tick(){
 		if(count > 0)
 			count--;
 		else PWM_off();
+		break;
+		case More:
+		PWM_off();
 		break;
 		default:
 		break;

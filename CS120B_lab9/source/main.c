@@ -1,12 +1,10 @@
-/*	Author: jxie031
- *  Partner(s) Name: Xichao Wang
- *	Lab Section:
- *	Assignment: Lab #  Exercise #
- *	Exercise Description: [optional - include for your own benefit]
+/*
+ * test.c
  *
- *	I acknowledge all content contained herein, excluding template or example
- *	code, is my own original work.
- */
+ * Created: 2019/7/6 18:06:56
+ * Author : Coco
+ */ 
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #ifdef _SIMULATE_
@@ -46,7 +44,7 @@ void TimerSet(unsigned long M){
 	_avr_timer_M = M;
 	_avr_timer_cntcurr = _avr_timer_M;
 }
-void setPWM(double frequency){
+void set_PWM(double frequency){
 	static double current_frequency;
 	if(frequency != current_frequency){
 		if(!frequency){TCCR3B &= 0x08;}
@@ -61,20 +59,20 @@ void setPWM(double frequency){
 }
 
 void PWM_on(){
-		TCCR3A = (1<<COM3A0);
-		TCCR3B = (1 << WGM32) | (1 << CS31)|(1<<CS30);
-		setPWM(0);
+	TCCR3A = (1<<COM3A0);
+	TCCR3B = (1 << WGM32) | (1 << CS31)|(1<<CS30);
+	set_PWM(261.63);
 }
 
 void PWM_off(){
 	TCCR3A =0x00;
 	TCCR3B = 0x00;
 }
-const double C = 261.63;
-const double D = 293.66;
-const double E = 329.63;
+const double C = 2610.63;
+const double D = 2930.66;
+const double E = 3290.63;
 
-enum states {start, wait, pressA0, pressA1, pressA2,pressing} state;
+enum states {start, wait, pressA0, pressA1, pressA2,pressing, More} state;
 unsigned int count;
 const unsigned int timer = 30;
 void tick(){
@@ -84,80 +82,95 @@ void tick(){
 	unsigned char A2 = ~PINA & 0x04;
 	switch(state){
 		case start:
-			state = wait;
-			break;
+		state = wait;
+		break;
 		case wait:
-			if(A0 && ~A1 && ~A2)
-				state = pressA0;
-			else if(~A0 && A1 && ~A2)
-				state = pressA1;
-			else if(~A0 && ~A1 && A2)
-				state = pressA2;
-			else state = wait;
-			break;
+		if( (A &0x07) == 0x01)
+		state = pressA0;
+		else if((A &0x07) ==0x02)
+		state = pressA1;
+		else if((A&0x07) == 0x04)
+		state = pressA2;
+		else if (A > 0)
+		state = More;
+		else state = wait;
+		break;
 		case pressA0:
-			if(A0)	state = pressing;
-			else state = wait;
-			break;
+		if(A == 1)
+		state = pressing;
+		else state = wait;
+		break;
 		case pressA1:
-			if(A1) state = pressing;
-			else state = wait;
-			break;
+		if(A == 2)
+		state = pressing;
+		else state = wait;
+		break;
 		case pressA2:
-			if(A2) state = pressing;
-			else state = wait;
-			break;
+		if(A == 4)
+		state = pressing;
+		else state = wait;
+		break;
 		case pressing:
-			if(A || count) state = pressing;
-			else state = wait;
-			break;
+		if(A != 1 && A != 0 && A != 2 && A != 4) state = More;
+		if(count>0) state = pressing;
+		else state = wait;
+		break;
+		case More:
+		if( A == 0)
+			state = wait;
+		else
+			state = More;
 		default:
-			state =start;
-			break;
+		state =start;
+		break;
 	}
 	switch(state){
 		case start:
-			break;
+		break;
 		case wait:
-			count = 0;
-			PWM_off();
-			break;
+		count = 0;
+		PWM_off();
+		break;
 		case pressA0:
-			count = timer;
-			PWM_on();
-			setPWM(C);
-			break;
+		count = timer;
+		PWM_on();
+		set_PWM(C);
+		break;
 		case pressA1:
-			count = timer;
-			PWM_on();
-			setPWM(D);
-			break;
+		count = timer;
+		PWM_on();
+		set_PWM(D);
+		break;
 		case pressA2:
-			count = timer;
-			PWM_on();
-			setPWM(E);
-			break;
+		count = timer;
+		PWM_on();
+		set_PWM(E);
+		break;
 		case pressing:
+		if(count > 0)
 			count--;
-			break;
+		else PWM_off();
+		break;
+		case More:
+		PWM_off();
+		break;
 		default:
-			break;
+		break;
 	}
 }
 int main(void) {
-    /* Insert DDR and PORT initializations */
+	/* Insert DDR and PORT initializations */
 	DDRA = 0x00;PORTA = 0xFF;
 	DDRB = 0xFF;PORTB = 0x00;
-    /* Insert your solution below */
-    TimerSet(1);
-    TimerOn();
+	/* Insert your solution below */
+	TimerSet(1);
+	TimerOn();
 	count = 0;
 	state = start;
-    while (1) {
+	while (1) {
 		tick();
 		while(!TimerFlag){}
 		TimerFlag = 0;
-		count++;
-    }
-    return 1;
+	}
+	return 1;
 }
